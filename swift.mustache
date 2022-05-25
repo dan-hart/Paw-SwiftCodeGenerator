@@ -50,7 +50,14 @@ func {{{method}}}{{{codeSlug}}}Request() async throws {
     // Create request with HTTP method
     var request = URLRequest(url: components.url!)
     request.httpMethod = "{{{method}}}".uppercased()
+    {{#body.has_short_body}}
+    request.httpBody = "{{{body.short_body}}}".data(using: String.Encoding.utf8, allowLossyConversion: false)
 
+    {{/body.has_short_body}}
+    {{^body.has_short_body}}
+    request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+
+    {{/body.has_short_body}}
     {{#headers.has_headers}}
     {{! ----- Add Headers ----- }}
     // Add headers to request
@@ -65,8 +72,8 @@ func {{{method}}}{{{codeSlug}}}Request() async throws {
     let loginData = loginString.data(using: String.Encoding.utf8)!
     let base64LoginString = loginData.base64EncodedString()
     request.addValue("Basic \(base64LoginString)", forHTTPHeaderField: "Authorization")
-    {{/httpBasicAuth}}
 
+    {{/httpBasicAuth}}
     {{! ----- DataTask ----- }}
     let (data, response) = try await URLSession.shared.data(for: request, delegate: nil)
     print("Response: \(response.debugDescription)")
