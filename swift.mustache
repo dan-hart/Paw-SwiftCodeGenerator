@@ -1,15 +1,10 @@
-func send{{{codeSlug}}}Request() {
-    {{! ----- Timeout ----- }}
-    {{#timeout}}
-    // Add timeout
-    let configuration = NSURLSessionConfiguration.defaultSessionConfiguration()
-    configuration.timeoutIntervalForRequest = {{{timeout}}}
-    let manager = Alamofire.SessionManager(configuration: configuration)
+import Foundation
 
-    {{/timeout}}
+/// {{{request.name}}}
+/// {{{method}}} {{{url.base}}}
+func {{{method}}}{{{codeSlug}}}Request() async throws {
     {{! ----- Headers ----- }}
     {{#headers.has_headers}}
-    // Add Headers
     let headers = [
     {{#headers.header_list}}
         "{{{header_name}}}":"{{{header_value}}}",
@@ -19,8 +14,7 @@ func send{{{codeSlug}}}Request() {
     {{/headers.has_headers}}
     {{! ----- URL Parameters ----- }}
     {{#has_params_to_encode}}
-    // Add URL parameters
-    let urlParams = [
+    let parameters = [
     {{#url.params}}
         "{{{name}}}":"{{{value}}}",
     {{/url.params}}
@@ -43,55 +37,49 @@ func send{{{codeSlug}}}Request() {
     {{{body.json_body_object}}}
 
     {{/body.has_json_body}}
-    {{! ----- Request ----- }}
-    {{^body.has_multipart_body}}
-    {{#body.has_raw_body}}
-    // Custom Body Encoding
-    struct RawDataEncoding: ParameterEncoding {
-        public static var `default`: RawDataEncoding { return RawDataEncoding() }
-        public func encode(_ urlRequest: URLRequestConvertible, with parameters: Parameters?) throws -> URLRequest {
-            var request = try urlRequest.asURLRequest()
-            {{#body.has_short_body}}
-            request.httpBody = "{{{body.short_body}}}".data(using: String.Encoding.utf8, allowLossyConversion: false)
-            {{/body.has_short_body}}
-            {{^body.has_short_body}}
-            request.httpBody = nil // set your body data here
-            {{/body.has_short_body}}
-            return request
-        }
+    var components = URLComponents(string: {{#has_params_to_encode}}"{{{url.base}}}"{{/has_params_to_encode}}{{^has_params_to_encode}}"{{{url.fullpath}}}"{{/has_params_to_encode}})!
+
+    {{#has_params_to_encode}}
+    for parameter in parameters {
+    if parameter.value.lowercased() == "null" { continue }
+        components.queryItems?.append(URLQueryItem(name: parameter.key, value: parameter.value))
     }
-    
-    {{/body.has_raw_body}}
-    // Fetch Request
-    {{#timeout}}manager{{/timeout}}{{^timeout}}Alamofire{{/timeout}}.request({{#has_params_to_encode}}"{{{url.base}}}"{{/has_params_to_encode}}{{^has_params_to_encode}}"{{{url.fullpath}}}"{{/has_params_to_encode}}, method: .{{{method}}}{{#body}}{{^body.has_raw_body}}, parameters: body{{/body.has_raw_body}}{{/body}}{{#body.has_raw_body}}, encoding: RawDataEncoding.default{{/body.has_raw_body}}{{^body}}{{#has_params_to_encode}}, parameters: urlParams{{/has_params_to_encode}}{{/body}}{{#body.has_json_body}}, encoding: JSONEncoding.default{{/body.has_json_body}}{{#body.has_url_encoded_body}}, encoding: URLEncoding.default{{/body.has_url_encoded_body}}{{#headers.has_headers}}, headers: headers{{/headers.has_headers}})
+
+    {{/has_params_to_encode}}
+    {{! ----- Request ----- }}
+    // Create request with HTTP method
+    var request = URLRequest(url: components.url!)
+    request.httpMethod = "{{{method}}}".uppercased()
+
+    {{#headers.has_headers}}
+    {{! ----- Add Headers ----- }}
+    // Add headers to request
+    _ = headers.map { key, value in
+        request.addValue(value, forHTTPHeaderField: key)
+    }
+
+    {{/headers.has_headers}}
+    {{! ----- Basic Auth ----- }}
     {{#httpBasicAuth}}
-        .authenticate(user: "{{httpBasicAuth.username}}", password: "{{httpBasicAuth.password}}")
+    let loginString = String(format: "%@:%@", "{{httpBasicAuth.username}}", "{{httpBasicAuth.password}}")
+    let loginData = loginString.data(using: String.Encoding.utf8)!
+    let base64LoginString = loginData.base64EncodedString()
+    request.addValue("Basic \(base64LoginString)", forHTTPHeaderField: "Authorization")
     {{/httpBasicAuth}}
-        .responseJSON { response in
-            if (response.result.error == nil) {
-                debugPrint("HTTP Response Body: \(response.data)")
-            }
-            else {
-                debugPrint("HTTP Request failed: \(response.result.error)")
-            }
-        }
-    {{/body.has_multipart_body}}
-    {{! ----- Upload (Multipart) ----- }}
-    {{#body.has_multipart_body}}
-    // Fetch Request
-    {{#timeout}}manager{{/timeout}}{{^timeout}}Alamofire{{/timeout}}.upload(multipartFormData: { multipartFormData in
-        {{#body.multipart_body}}
-            multipartFormData.append("{{{value}}}".data(using: String.Encoding.utf8, allowLossyConversion: false)!, withName :"{{{name}}}")
-        {{/body.multipart_body}}
-        }, usingThreshold: UInt64.init(), to: "{{{url.fullpath}}}", method: .{{{method}}}{{#headers.has_headers}}, headers: headers{{/headers.has_headers}}, encodingCompletion: { encodingResult in
-            switch encodingResult {
-            case .success(let upload, _, _):
-                upload.responseJSON { response in
-                    debugPrint(response)
-                }
-            case .failure(let encodingError):
-                print(encodingError)
-            }
-        })
-    {{/body.has_multipart_body}}
+
+    {{! ----- DataTask ----- }}
+    let (data, response) = try await URLSession.shared.data(for: request, delegate: nil)
+    print("Response: \(response.debugDescription)")
+    print("Data: \(String(data: data, encoding: .utf8) ?? "Unable to render data as UTF-8 string")")
+    //let json = try JSONSerialization.jsonObject(with: data, options: [])
+    //print("JSON: \(json)")
 }
+
+{{! ----- Running Function ----- }}
+Task {
+    try await {{{method}}}{{{codeSlug}}}Request()
+}
+
+{{! ----- Helpers for Playgrounds & CLI ----- }}
+//sleep(3) // useful for playgrounds, keep app running long enough for task to finish
+//_ = readLine() // useful for command line tool testing to keep the console open
