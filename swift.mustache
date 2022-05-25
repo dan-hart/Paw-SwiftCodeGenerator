@@ -37,7 +37,7 @@ func {{{method}}}{{{codeSlug}}}Request() async throws {
     {{{body.json_body_object}}}
 
     {{/body.has_json_body}}
-    var components = URLComponents(string: {{#has_params_to_encode}}"{{{url.base}}}"{{/has_params_to_encode}}{{^has_params_to_encode}}"{{{url.fullpath}}}"{{/has_params_to_encode}})!
+    {{#has_params_to_encode}}var{{/has_params_to_encode}}{{^has_params_to_encode}}let{{/has_params_to_encode}} components = URLComponents(string: {{#has_params_to_encode}}"{{{url.base}}}"{{/has_params_to_encode}}{{^has_params_to_encode}}"{{{url.fullpath}}}"{{/has_params_to_encode}})!
 
     {{#has_params_to_encode}}
     for parameter in parameters {
