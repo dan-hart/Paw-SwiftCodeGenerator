@@ -50,6 +50,8 @@ func {{{method}}}{{{codeSlug}}}Request() async throws {
     // Create request with HTTP method
     var request = URLRequest(url: components.url!)
     request.httpMethod = "{{{method}}}".uppercased()
+    
+    {{#body.has_json_body}}
     {{#body.has_short_body}}
     request.httpBody = "{{{body.short_body}}}".data(using: String.Encoding.utf8, allowLossyConversion: false)
 
@@ -58,6 +60,7 @@ func {{{method}}}{{{codeSlug}}}Request() async throws {
     request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
 
     {{/body.has_short_body}}
+    {{/body.has_json_body}}
     {{#headers.has_headers}}
     {{! ----- Add Headers ----- }}
     // Add headers to request
