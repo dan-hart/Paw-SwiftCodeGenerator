@@ -1,0 +1,126 @@
+class MyRequestController {
+    func sendRequest() {
+        /* Configure session, choose between:
+           * defaultSessionConfiguration
+           * ephemeralSessionConfiguration
+           * backgroundSessionConfigurationWithIdentifier:
+         And set session-wide properties, such as: HTTPAdditionalHeaders,
+         HTTPCookieAcceptPolicy, requestCachePolicy or timeoutIntervalForRequest.
+         */
+        let sessionConfig = URLSessionConfiguration.default
+
+        /* Create session, and optionally set a URLSessionDelegate. */
+        let session = URLSession(configuration: sessionConfig, delegate: nil, delegateQueue: nil)
+
+        /* Create the Request:
+           {{{request.name}}} ({{{request.method}}} {{{url.base}}})
+         */
+
+        guard var URL = URL(string: "{{{url.base}}}") else {return}
+        {{#url.has_params}}
+        let URLParams = [
+        {{#url.params}}
+            "{{{name}}}": "{{{value}}}",
+        {{/url.params}}
+        ]
+        URL = URL.appendingQueryParameters(URLParams)
+        {{/url.has_params}}
+        var request = URLRequest(url: URL)
+        request.httpMethod = "{{{request.method}}}"
+
+        {{#headers.has_headers}}
+        // Headers
+
+        {{#headers.header_list}}
+        request.addValue("{{{header_value}}}", forHTTPHeaderField: "{{{header_name}}}")
+        {{/headers.header_list}}
+
+        {{/headers.has_headers}}
+        {{#body.has_url_encoded_body}}
+        // Form URL-Encoded Body
+
+        let bodyParameters = [
+        {{#body.url_encoded_body}}
+            "{{{name}}}": "{{{value}}}",
+        {{/body.url_encoded_body}}
+        ]
+        let bodyString = bodyParameters.queryParameters
+        request.httpBody = bodyString.data(using: .utf8, allowLossyConversion: true)
+
+        {{/body.has_url_encoded_body}}
+        {{#body.has_json_body}}
+        // JSON Body
+
+        {{{body.json_body_object}}}
+        request.httpBody = try! JSONSerialization.data(withJSONObject: bodyObject, options: [])
+
+        {{/body.has_json_body}}
+        {{#body.has_raw_body}}
+        // Body
+
+        let bodyString = "{{{body.raw_body}}}"
+        request.httpBody = bodyString.data(using: .utf8, allowLossyConversion: true)
+
+        {{/body.has_raw_body}}
+        {{#body.has_long_body}}
+        // Body
+
+        let bodyString = "" // set your body string
+        request.httpBody = bodyString.data(using: .utf8, allowLossyConversion: true)
+
+        {{/body.has_long_body}}
+        /* Start a new Task */
+        let task = session.dataTask(with: request, completionHandler: { (data: Data?, response: URLResponse?, error: Error?) -> Void in
+            if (error == nil) {
+                // Success
+                let statusCode = (response as! HTTPURLResponse).statusCode
+                print("URL Session Task Succeeded: HTTP \(statusCode)")
+            }
+            else {
+                // Failure
+                print("URL Session Task Failed: %@", error!.localizedDescription);
+            }
+        })
+        task.resume()
+        session.finishTasksAndInvalidate()
+    }
+}
+
+{{#has_utils_query_string}}
+
+protocol URLQueryParameterStringConvertible {
+    var queryParameters: String {get}
+}
+
+extension Dictionary : URLQueryParameterStringConvertible {
+    /**
+     This computed property returns a query parameters string from the given NSDictionary. For
+     example, if the input is @{@"day":@"Tuesday", @"month":@"January"}, the output
+     string will be @"day=Tuesday&month=January".
+     @return The computed parameters string.
+    */
+    var queryParameters: String {
+        var parts: [String] = []
+        for (key, value) in self {
+            let part = String(format: "%@=%@",
+                String(describing: key).addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!,
+                String(describing: value).addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)
+            parts.append(part as String)
+        }
+        return parts.joined(separator: "&")
+    }
+    
+}
+
+extension URL {
+    /**
+     Creates a new URL by adding the given query parameters.
+     @param parametersDictionary The query parameter dictionary to add.
+     @return A new URL.
+    */
+    func appendingQueryParameters(_ parametersDictionary : Dictionary<String, String>) -> URL {
+        let URLString : String = String(format: "%@?%@", self.absoluteString, parametersDictionary.queryParameters)
+        return URL(string: URLString)!
+    }
+}
+{{/has_utils_query_string}}
