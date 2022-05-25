@@ -34,3 +34,6 @@
 
  * [Mustache.js](https://github.com/janl/mustache.js/), also released under the MIT License
  * [URI.js](http://medialize.github.io/URI.js/), also released under the MIT License
+
+## Buy Me A Coffee
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/codedbydan)
