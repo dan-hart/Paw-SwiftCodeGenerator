@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/dan-hart/Paw-SwiftCodeGenerator.svg?branch=main)](https://travis-ci.org/dan-hart/Paw-SwiftCodeGenerator)
-
 # Swift Code Generator (Paw Extension)
 
 A [Paw Extension](http://luckymarmot.com/paw/extensions/) that generates Swift code.
